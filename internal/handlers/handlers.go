@@ -28,6 +28,7 @@ import (
 	"net/http"
 
 	"github.com/crislerwin/url-shortener/internal/crypto"
+	"github.com/crislerwin/url-shortener/internal/metrics"
 	"github.com/crislerwin/url-shortener/internal/storage"
 	"github.com/crislerwin/url-shortener/internal/utils"
 )
@@ -60,16 +61,21 @@ func (h *Handler) RedirectHandler(w http.ResponseWriter, r *http.Request) {
 
 	encryptedURL, ok := h.store.Get(shortID)
 	if !ok {
+		metrics.URLRedirectsTotal.WithLabelValues("not_found").Inc()
 		http.Error(w, "This URL doesn't exist", http.StatusNotFound)
 		return
 	}
 
 	decryptedURL, err := h.encryptor.Decrypt(encryptedURL)
 	if err != nil {
+		metrics.URLRedirectsTotal.WithLabelValues("error").Inc()
+		metrics.EncryptionOperationsTotal.WithLabelValues("decrypt", "error").Inc()
 		http.Error(w, "Failed to decrypt URL", http.StatusInternalServerError)
 		return
 	}
 
+	metrics.EncryptionOperationsTotal.WithLabelValues("decrypt", "success").Inc()
+	metrics.URLRedirectsTotal.WithLabelValues("success").Inc()
 	http.Redirect(w, r, decryptedURL, http.StatusFound)
 }
 
@@ -83,9 +89,11 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	encryptedURL, err := h.encryptor.Encrypt(originalURL)
 	if err != nil {
+		metrics.EncryptionOperationsTotal.WithLabelValues("encrypt", "error").Inc()
 		http.Error(w, "Failed to encrypt URL", http.StatusInternalServerError)
 		return
 	}
+	metrics.EncryptionOperationsTotal.WithLabelValues("encrypt", "success").Inc()
 
 	shortID, err := utils.GenerateShortID(6)
 	if err != nil {
@@ -97,6 +105,9 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to store URL", http.StatusInternalServerError)
 		return
 	}
+
+	// Increment metrics
+	metrics.URLsShortenedTotal.Inc()
 
 	shortURL := fmt.Sprintf("%s/%s", h.baseURL, shortID)
 	fmt.Fprintf(w, "The shortened URL of this original URL is: %s", shortURL)
