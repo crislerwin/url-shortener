@@ -101,3 +101,16 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	shortURL := fmt.Sprintf("%s/%s", h.baseURL, shortID)
 	fmt.Fprintf(w, "The shortened URL of this original URL is: %s", shortURL)
 }
+
+// Health handles health check requests
+func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
+	// Check if storage is accessible
+	if err := h.store.Ping(); err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		fmt.Fprintf(w, "Database health check failed: %v", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, "OK")
+}

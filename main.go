@@ -53,6 +53,7 @@ func main() {
 	handler := handlers.NewHandler(store, encryptor, baseURL)
 
 	// Register routes
+	http.HandleFunc("/health", handler.Health)
 	http.HandleFunc("/shorten", handler.ShortenURL)
 	http.HandleFunc("/", handler.RedirectHandler)
 

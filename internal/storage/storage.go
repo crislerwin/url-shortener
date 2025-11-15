@@ -31,6 +31,7 @@ type Storage interface {
 	Delete(shortID string)
 	Exists(shortID string) bool
 	Count() int
+	Ping() error
 }
 
 // URLStore manages URL storage with thread-safe operations
@@ -89,4 +90,9 @@ func (s *URLStore) Count() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return len(s.urls)
+}
+
+// Ping checks if the storage is accessible (always returns nil for in-memory storage)
+func (s *URLStore) Ping() error {
+	return nil
 }
