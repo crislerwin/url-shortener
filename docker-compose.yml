@@ -1,30 +1,60 @@
-version: '3.8'
-
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: url-shortener-db
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-urlshortener}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-urlshortener_dev_password}
-      POSTGRES_DB: ${POSTGRES_DB:-urlshortener}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-urlshortener}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - url-shortener-network
+    postgres:
+        image: postgres:16-alpine
+        container_name: url-shortener-db
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER:-urlshortener}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-urlshortener_dev_password}
+            POSTGRES_DB: ${POSTGRES_DB:-urlshortener}
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+            - ./migrations:/docker-entrypoint-initdb.d
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-urlshortener}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - url-shortener-network
+        restart: unless-stopped
+
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: url-shortener-app
+        environment:
+            DATABASE_URL: postgres://${POSTGRES_USER:-urlshortener}:${POSTGRES_PASSWORD:-urlshortener_dev_password}@postgres:5432/${POSTGRES_DB:-urlshortener}?sslmode=disable
+            SECRET_KEY: ${SECRET_KEY:-shhhhh_this_is_an_dumb_key123456}
+            SERVER_PORT: ${SERVER_PORT:-8080}
+            BASE_URL: ${BASE_URL:-http://localhost:8080}
+        ports:
+            - "${SERVER_PORT:-8080}:8080"
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - url-shortener-network
+        restart: unless-stopped
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "wget",
+                    "--no-verbose",
+                    "--tries=1",
+                    "--spider",
+                    "http://localhost:8080/",
+                ]
+            interval: 30s
+            timeout: 3s
+            retries: 3
+            start_period: 5s
 
 volumes:
-  postgres_data:
-    driver: local
+    postgres_data:
+        driver: local
 
 networks:
-  url-shortener-network:
-    driver: bridge
+    url-shortener-network:
+        driver: bridge

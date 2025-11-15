@@ -17,9 +17,13 @@ A simple URL shortening service built with Go that encrypts stored URLs using AE
 
 ## Prerequisites
 
-- Go 1.25.4 or higher
+**Option 1: Docker (Recommended)**
 - Docker and Docker Compose
-- PostgreSQL 16 (via Docker)
+- No Go installation needed!
+
+**Option 2: Local Development**
+- Go 1.25.4 or higher
+- Docker and Docker Compose (for PostgreSQL only)
 
 ## Installation
 
@@ -35,7 +39,10 @@ cd url-shortener
 ```
 url-shortener/
 ├── main.go                    # Application entry point
-├── docker-compose.yml         # Docker configuration for PostgreSQL
+├── Dockerfile                 # Multi-stage Docker build
+├── docker-compose.yml         # Docker Compose configuration
+├── Makefile                   # Common development commands
+├── .dockerignore              # Docker build exclusions
 ├── .env.example               # Environment variables template
 ├── .env                       # Environment variables (git-ignored)
 ├── migrations/                # Database migrations
@@ -48,7 +55,7 @@ url-shortener/
 │   │   ├── handlers.go
 │   │   └── handlers_test.go
 │   ├── storage/              # URL storage implementations
-│   │   ├── storage.go        # In-memory storage (legacy)
+│   │   ├── storage.go        # Storage interface + in-memory impl
 │   │   ├── postgres.go       # PostgreSQL storage
 │   │   └── storage_test.go
 │   └── utils/                # Utility functions (ID generation)
@@ -60,57 +67,68 @@ url-shortener/
 
 ## Quick Start
 
-### 1. Setup Environment Variables
+### Option 1: Docker (Easiest - Recommended)
 
-Copy the example environment file:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` if you need to change any configuration (optional for development).
-
-### 2. Start PostgreSQL with Docker
-
-Start the PostgreSQL database:
+Start everything with one command:
 
 ```bash
 docker-compose up -d
 ```
 
-Verify the database is running:
+That's it! The application is running at `http://localhost:8080`
 
-```bash
-docker-compose ps
-```
-
-You should see the `url-shortener-db` container running.
-
-### 3. Run the Application
-
-Run the application:
-
-```bash
-go run main.go
-```
-
-The server will start on `http://localhost:8080` and automatically connect to PostgreSQL.
-
-### 4. Stop Services
-
-To stop the application, press `Ctrl+C`.
-
-To stop the database:
+Stop everything:
 
 ```bash
 docker-compose down
 ```
 
-To stop and remove all data (including stored URLs):
+### Option 2: Using Makefile (Recommended for Development)
+
+View all available commands:
 
 ```bash
-docker-compose down -v
+make help
 ```
+
+Start in development mode (with live logs):
+
+```bash
+make dev
+```
+
+Common commands:
+
+```bash
+make run          # Start all services in background
+make stop         # Stop all services
+make logs         # View logs
+make test         # Run tests
+make db-shell     # Open database shell
+make clean        # Clean up everything
+```
+
+### Option 3: Local Development (Go Required)
+
+1. Setup environment:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Start PostgreSQL:
+   ```bash
+   docker-compose up -d postgres
+   ```
+
+3. Run the application:
+   ```bash
+   go run main.go
+   ```
+
+4. Stop services:
+   ```bash
+   docker-compose down
+   ```
 
 ## Usage
 
@@ -285,17 +303,66 @@ The application uses the following environment variables (defined in `.env`):
 | `POSTGRES_DB` | PostgreSQL database name | `urlshortener` |
 | `POSTGRES_PORT` | PostgreSQL port | `5432` |
 
-## Database Management
+## Docker Commands
 
-### View Database Logs
+### Build and Run
 
 ```bash
+# Build the application image
+docker-compose build
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f app
 docker-compose logs -f postgres
+
+# Check service status
+docker-compose ps
+
+# Restart services
+docker-compose restart
+
+# Stop services
+docker-compose down
+
+# Stop and remove volumes (deletes all data)
+docker-compose down -v
 ```
 
-### Connect to PostgreSQL
+### Using Makefile (Easier)
 
-Using `psql`:
+All the above commands are available via Makefile:
+
+```bash
+make build        # Build containers
+make run          # Start services
+make dev          # Start with logs
+make logs         # View logs
+make ps           # Service status
+make restart      # Restart services
+make stop         # Stop services
+make clean        # Clean everything
+```
+
+## Database Management
+
+### Using Makefile
+
+```bash
+make db-shell     # Open PostgreSQL shell
+make db-logs      # View database logs
+make db-backup    # Backup to backup.sql
+make db-restore   # Restore from backup.sql
+```
+
+### Manual Commands
+
+Connect to PostgreSQL:
 ```bash
 docker exec -it url-shortener-db psql -U urlshortener -d urlshortener
 ```
@@ -315,15 +382,17 @@ SELECT short_id, click_count FROM urls ORDER BY click_count DESC LIMIT 10;
 DELETE FROM urls WHERE created_at < NOW() - INTERVAL '1 year';
 ```
 
-### Backup Database
-
+Backup:
 ```bash
+make db-backup
+# or manually:
 docker exec url-shortener-db pg_dump -U urlshortener urlshortener > backup.sql
 ```
 
-### Restore Database
-
+Restore:
 ```bash
+make db-restore
+# or manually:
 cat backup.sql | docker exec -i url-shortener-db psql -U urlshortener urlshortener
 ```
 
