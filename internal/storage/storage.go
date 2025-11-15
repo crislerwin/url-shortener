@@ -1,41 +1,37 @@
-// Package storage provides thread-safe in-memory storage for URL mappings.
+// Package storage provides storage implementations for URL mappings.
 //
-// This package implements a concurrent-safe key-value store that maps short IDs
-// to encrypted URLs. It uses sync.RWMutex to allow multiple concurrent readers
-// while ensuring exclusive access for write operations.
+// This package defines the Storage interface and provides both in-memory
+// and PostgreSQL implementations for storing URL mappings.
 //
 // Example usage:
 //
+//	// In-memory storage
 //	store := storage.NewURLStore()
 //
-//	// Store a URL
-//	err := store.Set("abc123", "encrypted-url-data")
+//	// PostgreSQL storage
+//	store, err := storage.NewPostgresURLStore(ctx, databaseURL)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	// Retrieve a URL
+//	// Both implement the same interface
+//	err = store.Set("abc123", "encrypted-url-data")
 //	url, ok := store.Get("abc123")
-//	if !ok {
-//	    log.Println("URL not found")
-//	}
-//
-//	// Check if URL exists
-//	if store.Exists("abc123") {
-//	    fmt.Println("URL exists")
-//	}
-//
-//	// Delete a URL
-//	store.Delete("abc123")
-//
-//	// Get total count
-//	count := store.Count()
 package storage
 
 import (
 	"fmt"
 	"sync"
 )
+
+// Storage defines the interface for URL storage implementations
+type Storage interface {
+	Set(shortID, url string) error
+	Get(shortID string) (string, bool)
+	Delete(shortID string)
+	Exists(shortID string) bool
+	Count() int
+}
 
 // URLStore manages URL storage with thread-safe operations
 type URLStore struct {
