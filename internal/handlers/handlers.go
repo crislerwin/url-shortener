@@ -34,13 +34,13 @@ import (
 
 // Handler manages HTTP handlers with dependencies
 type Handler struct {
-	store     *storage.URLStore
+	store     storage.Storage
 	encryptor *crypto.Encryptor
 	baseURL   string
 }
 
 // NewHandler creates a new Handler
-func NewHandler(store *storage.URLStore, encryptor *crypto.Encryptor, baseURL string) *Handler {
+func NewHandler(store storage.Storage, encryptor *crypto.Encryptor, baseURL string) *Handler {
 	return &Handler{
 		store:     store,
 		encryptor: encryptor,
