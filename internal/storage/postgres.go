@@ -188,3 +188,15 @@ func (s *PostgresURLStore) CleanExpiredURLs() (int64, error) {
 
 	return result.RowsAffected(), nil
 }
+
+// Ping checks if the database connection is alive
+func (s *PostgresURLStore) Ping() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.pool.Ping(ctx); err != nil {
+		return fmt.Errorf("database ping failed: %w", err)
+	}
+
+	return nil
+}
