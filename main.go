@@ -12,8 +12,10 @@ import (
 
 	"github.com/crislerwin/url-shortener/internal/crypto"
 	"github.com/crislerwin/url-shortener/internal/handlers"
+	"github.com/crislerwin/url-shortener/internal/metrics"
 	"github.com/crislerwin/url-shortener/internal/storage"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -49,13 +51,17 @@ func main() {
 
 	log.Println("Successfully connected to PostgreSQL database")
 
+	// Initialize metrics
+	metrics.Init()
+
 	// Initialize handler
 	handler := handlers.NewHandler(store, encryptor, baseURL)
 
 	// Register routes
 	http.HandleFunc("/health", handler.Health)
-	http.HandleFunc("/shorten", handler.ShortenURL)
-	http.HandleFunc("/", handler.RedirectHandler)
+	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/shorten", metrics.HTTPMetricsMiddleware(handler.ShortenURL))
+	http.HandleFunc("/", metrics.HTTPMetricsMiddleware(handler.RedirectHandler))
 
 	// Setup HTTP server
 	server := &http.Server{
