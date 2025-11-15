@@ -2,6 +2,18 @@
 
 A simple URL shortening service built with Go that encrypts stored URLs using AES-256 encryption.
 
+> **⚠️ Educational Project Notice**
+> 
+> This project is intentionally over-engineered for learning purposes. It includes production-grade features (PostgreSQL, Docker, encryption, Prometheus metrics, connection pooling) to demonstrate professional Go development patterns and DevOps practices.
+> 
+> **For a real URL shortener**, you'd likely use:
+> - Simple in-memory storage (map)
+> - No encryption (URLs are public anyway)
+> - Fewer metrics and monitoring
+> - Simpler deployment
+> 
+> **This project teaches**: Go best practices, Docker containerization, database management, observability, testing strategies, and production architecture patterns - skills valuable for backend engineering roles.
+
 ## Features
 
 - Shorten long URLs to 6-character alphanumeric short codes
